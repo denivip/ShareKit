@@ -8,6 +8,7 @@
 
 #import "SHKGooglePlus.h"
 #import "SHKConfiguration.h"
+#import "GPPSignIn.h"
 
 @interface SHKGooglePlus ()
 
@@ -84,7 +85,8 @@
 
         self = [super init];
         if (self) {
-            _mGooglePlusShare = [[GPPShare alloc] initWithClientID:SHKCONFIG(googlePlusClientId)];
+            [[GPPSignIn sharedInstance] setClientID:SHKCONFIG(googlePlusClientId)];
+            _mGooglePlusShare = [GPPShare sharedInstance];
             _mGooglePlusShare.delegate = self;
         }
         return self;
@@ -92,7 +94,6 @@
 
 - (void)dealloc {
 
-    [_mGooglePlusShare release];
 	[super dealloc];
 }
 
