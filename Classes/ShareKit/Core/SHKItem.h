@@ -26,6 +26,7 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "SHKFile.h"
 
 extern NSString * const SHKAttachmentSaveDir;
 
@@ -37,6 +38,7 @@ typedef enum
 	SHKShareTypeImage,
 	SHKShareTypeFile,
     SHKShareTypeUserInfo
+    
 } SHKShareType;
 
 typedef enum 
@@ -45,25 +47,30 @@ typedef enum
     SHKURLContentTypeWebpage,
     SHKURLContentTypeAudio,
     SHKURLContentTypeVideo,
-    SHKURLContentTypeImage,
+    SHKURLContentTypeImage
+    
 } SHKURLContentType;
 
-@interface SHKItem : NSObject
+typedef enum
+{
+    SHKImageConversionTypeJPG,
+    SHKImageConversionTypePNG
+    
+} SHKImageConversionType;
+
+@interface SHKItem : NSObject <NSCoding>
 
 @property (nonatomic) SHKShareType shareType;
-
-@property (nonatomic, retain)	NSURL *URL;
-@property (nonatomic) SHKURLContentType URLContentType;
-
-@property (nonatomic, retain)	UIImage *image;
 
 @property (nonatomic, retain)	NSString *title;
 @property (nonatomic, retain)	NSString *text;
 @property (nonatomic, retain)	NSArray *tags;
 
-@property (nonatomic, retain)	NSData *data;
-@property (nonatomic, retain)	NSString *mimeType;
-@property (nonatomic, retain)	NSString *filename;
+@property (nonatomic, retain)	NSURL *URL;
+@property (nonatomic) SHKURLContentType URLContentType;
+@property (nonatomic, retain)	UIImage *image;
+
+@property (nonatomic, retain) SHKFile *file;
 
 /*** creation methods ***/
 
@@ -75,22 +82,24 @@ typedef enum
 + (id)URL:(NSURL *)url title:(NSString *)title contentType:(SHKURLContentType)type;
 + (id)image:(UIImage *)image title:(NSString *)title;
 + (id)text:(NSString *)text;
-+ (id)file:(NSData *)data filename:(NSString *)filename mimeType:(NSString *)mimeType title:(NSString *)title;
+
+//use this method if you share file from the disk.
++ (id)filePath:(NSString *)path title:(NSString *)title;
+
+//use only if user needs to share in-memory data. Temporary files may be created. Make sure you pass filename with correct extension, as mimetype is derived from the extension.
++ (id)file:(NSData *)data filename:(NSString *)filename mimeType:(NSString *)mimeType title:(NSString *)title __attribute__((deprecated ("use new filePath:title or in case you share in-memory data fileData:filename:title. Mimetype is derived from filename, regardless of what you set")));
++ (id)fileData:(NSData *)data filename:(NSString *)filename title:(NSString *)title;
+
+//some sharers need to share UIImage as data file, this makes the conversion
+- (void)convertImageShareToFileShareOfType:(SHKImageConversionType)conversionType quality:(CGFloat)quality;
 
 /*** custom value methods ***/
 
-/* these are for custom properties injection. Use them only if you are subclassing a sharer and need more properties. If you are creating a new sharer and builtin properties are insufficient, create sharer specific extension instead */
+/* these are for custom properties injection. Use them only if you are adding some custom functionality to your sharer subclass. */
 
-- (void)setCustomValue:(NSString *)value forKey:(NSString *)key;
+- (void)setCustomValue:(id)value forKey:(NSString *)key;
 - (NSString *)customValueForKey:(NSString *)key;
 - (BOOL)customBoolForSwitchKey:(NSString *)key;
-
-/*** archive methods ***/
-
-/* used when ShareKit needs to save SHKItem to persistent storage. (e.g. offline queue or during facebook's SSO trip to different app  */
-
-- (NSDictionary *)dictionaryRepresentation;
-+ (id)itemFromDictionary:(NSDictionary *)dictionary;
 
 /*** sharer specific extension properties ***/
 
