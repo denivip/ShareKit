@@ -76,6 +76,7 @@
 	[_centerMessageLabel release];
 	[_subMessageLabel release];
 	[_spinner release];
+    [_progress release];
 	
 	[super dealloc];
 }
@@ -244,9 +245,9 @@
 
 - (void)showProgress
 {
-	if (self.progress == nil)
+	if (_progress == nil)
 	{
-        self.progress = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleBar];
+        _progress = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleBar];
         
 		self.progress.frame = CGRectMake(15.0f,
                                    15.0f,
