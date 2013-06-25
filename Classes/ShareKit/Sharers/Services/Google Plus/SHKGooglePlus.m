@@ -8,7 +8,7 @@
 
 #import "SHKGooglePlus.h"
 #import "SHKConfiguration.h"
-#import "GPPSignIn.h"
+#import <GooglePlus/GooglePlus.h>
 
 @interface SHKGooglePlus ()
 
