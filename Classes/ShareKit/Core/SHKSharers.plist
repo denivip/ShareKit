@@ -19,11 +19,12 @@
 		<string>SHKEvernote</string>
 		<string>SHKDelicious</string>
 		<string>SHKTwitter</string>
+		<string>SHKiOSTwitter</string>
 		<string>SHKDiigo</string>
 		<string>SHKPinboard</string>
-		<string>SHKGoogleReader</string>
 		<string>SHKGooglePlus</string>
 		<string>SHKFacebook</string>
+		<string>SHKiOSFacebook</string>
 		<string>SHKVkontakte</string>
 		<string>SHKBuffer</string>
 		<string>SHKPocket</string>

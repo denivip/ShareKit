@@ -58,7 +58,7 @@
 // 
 //    Your CFBundleURLSchemes entry: fb555lite
 - (NSString*)facebookAppId {
-	return @"281987678567988";
+	return @"232705466797125";
 }
 
 - (NSString*)facebookLocalAppId {
@@ -76,7 +76,7 @@
  register the bundle ID of your application.
  */
 - (NSString*)googlePlusClientId {
-    return @"651258972991.apps.googleusercontent.com";
+    return @"1009915768979.apps.googleusercontent.com";
 }
 
 //Pocket v3 consumer key. http://getpocket.com/developer/apps/. If you have old read it later app, you should obtain new key.
@@ -265,8 +265,8 @@
 - (NSString *) dropboxRootFolder {
     return @"dropbox";
 }
--(BOOL)dropboxShouldOverwriteExistedFile {
-    return NO;
+- (NSNumber *)dropboxShouldOverwriteExistedFile {
+    return [NSNumber numberWithBool:NO];
 }
 -(NSString *)youTubeConsumerKey
 {
@@ -295,16 +295,18 @@
 	return @"1bf70db9032207624e2ad58fb24b1593";
 }
 
--(BOOL)bufferShouldShortenURLS {
-    return YES;
-}
-
-
 /*
  UI Configuration : Basic
  ------------------------
  These provide controls for basic UI settings.  For more advanced configuration see below.
  */
+
+/*
+ For sharers supported by Social.framework you can choose to present Apple's UI (SLComposeViewController) or ShareKit's UI (you can customize ShareKit's UI). Note that SLComposeViewController has only limited sharing capabilities, e.g. for file sharing on Twitter (photo files, video files, large UIImages) ShareKit's UI will be used anyway.
+ */
+- (NSNumber *)useAppleShareUI {
+    return @YES;
+}
 
 - (UIColor*)barTintForView:(UIViewController*)vc {    
 	

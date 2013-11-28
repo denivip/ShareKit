@@ -7,8 +7,10 @@
 //
 
 #import "SHKGooglePlus.h"
-#import "SHKConfiguration.h"
-#import <GooglePlus/GooglePlus.h>
+
+#import "SharersCommonHeaders.h"
+
+#import <GooglePlus/GPPSignIn.h>
 
 @interface SHKGooglePlus ()
 
@@ -92,10 +94,6 @@
         return self;
 }
 
-- (void)dealloc {
-
-	[super dealloc];
-}
 
 #pragma mark -
 #pragma mark GPPShareDelegate
@@ -104,7 +102,6 @@
     
     SHKGooglePlus *gPlusSharer = [[SHKGooglePlus alloc] init];
     BOOL result = [gPlusSharer.mGooglePlusShare handleURL:url sourceApplication:sourceApplication annotation:annotation];
-    [gPlusSharer release];
     return result;
 }
 

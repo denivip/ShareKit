@@ -26,8 +26,14 @@
 //
 
 #import <UIKit/UIKit.h>
-#import "SHK.h"
-#import "SHKFormController.h"
+
+#import "SHKItem.h"
+#import "FormControllerCallback.h"
+
+@class SHKRequest;
+@class SHKFormController;
+@class SHKFormOptionController;
+@class SHKFile;
 
 @class SHKSharer;
 
@@ -54,13 +60,12 @@ typedef enum
 
 @interface SHKSharer : UINavigationController
 
-@property (nonatomic, retain) id <SHKSharerDelegate> shareDelegate;
+@property (nonatomic, strong) id <SHKSharerDelegate> shareDelegate;
 
-@property (retain) SHKItem *item;
-@property (retain) SHKFormController *pendingForm;
-@property (assign) SHKFormOptionController *curOptionController; //TODO in ARC should be weak, remove all nilling
-@property (retain) SHKRequest *request; //TODO: sharer retains request, but request retains sharer too. Memory leak?
-@property (nonatomic, retain) NSError *lastError;
+@property (strong) SHKItem *item;
+@property (weak) SHKFormController *pendingForm;
+@property (weak) SHKFormOptionController *curOptionController;
+@property (nonatomic, strong) NSError *lastError;
 @property BOOL quiet;
 @property SHKSharerPendingAction pendingAction;
 
@@ -147,18 +152,32 @@ typedef enum
 - (void)promptAuthorization;
 - (NSString *)getAuthValueForKey:(NSString *)key;
 
+/*!
+ * Convenient method for getting authorization status for particular service.
+ *
+ * @return If any user is authorized, returns YES, otherwise nil.
+ */
++ (BOOL)isServiceAuthorized;
+
+/*!
+ * Convenient method for getting username, if any user is logged in.
+ *
+ * @return If any user is authorized, returns username, otherwise nil. For this method to work for OAuth sharer, this has to implement canGetUserInfo, otherwise returns nil.
+ */
++ (NSString *)username;
+
 #pragma mark Authorization Form
 
 - (void)authorizationFormShow;
-- (void)authorizationFormValidate:(SHKFormController *)form;
-- (void)authorizationFormSave:(SHKFormController *)form;
-- (void)authorizationFormCancel:(SHKFormController *)form;
+- (FormControllerCallback)authorizationFormValidate;
+- (FormControllerCallback)authorizationFormSave;
+- (FormControllerCallback)authorizationFormCancel;
 - (NSArray *)authorizationFormFields;
 - (NSString *)authorizationFormCaption;
 + (NSArray *)authorizationFormFields;
 + (NSString *)authorizationFormCaption;
 + (void)logout;
-+ (BOOL)isServiceAuthorized;
+
 
 #pragma mark -
 #pragma mark API Implementation
@@ -178,9 +197,10 @@ typedef enum
 #pragma mark Share Form
 
 - (NSArray *)shareFormFieldsForType:(SHKShareType)type;
-- (void)shareFormValidate:(SHKFormController *)form;
-- (void)shareFormSave:(SHKFormController *)form;
-- (void)shareFormCancel:(SHKFormController *)form;
+- (FormControllerCallback)shareFormValidate;
+- (FormControllerCallback)shareFormSave;
+- (FormControllerCallback)shareFormCancel;
+- (void)setupFormController:(SHKFormController *)rootView withFields:(NSArray *)shareFormFields;
 
 #pragma mark -
 #pragma mark Pending Actions

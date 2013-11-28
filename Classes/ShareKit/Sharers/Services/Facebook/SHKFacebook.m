@@ -26,15 +26,13 @@
 //
 //
 
-#import "SHKiOSFacebook.h"
 #import "SHKFacebook.h"
-#import <FacebookSDK/FacebookSDK.h>
-#import "SHKConfiguration.h"
-#import "NSMutableDictionary+NSNullsToEmptyStrings.h"
-#import <Social/Social.h>
 
-static NSString *const kSHKFacebookUserInfo =@"kSHKFacebookUserInfo";
-static NSString *const kSHKFacebookVideoUploadLimits =@"kSHKFacebookVideoUploadLimits";
+#import "SHKFacebookCommon.h"
+#import "NSMutableDictionary+NSNullsToEmptyStrings.h"
+#import "SharersCommonHeaders.h"
+
+#import <FacebookSDK/FacebookSDK.h>
 
 // these are ways of getting back to the instance that made the request through statics
 // there are two so that the logic of their lifetimes is understandable.
@@ -43,8 +41,6 @@ static SHKFacebook *requestingPermisSHKFacebook=nil;
 
 @interface SHKFacebook()
 
-- (void)showFacebookForm;
-
 - (BOOL)openSessionWithAllowLoginUI:(BOOL)allowLog;
 - (void)sessionStateChanged:(FBSession *)session
                       state:(FBSessionState) state
@@ -52,9 +48,8 @@ static SHKFacebook *requestingPermisSHKFacebook=nil;
 
 - (void) doSend;
 - (void) doNativeShow;
-- (void) doSHKShow;
 
-@property (readwrite,retain) NSMutableSet* pendingConnections;
+@property (readwrite,strong) NSMutableSet* pendingConnections;
 @end
 
 @implementation SHKFacebook
@@ -65,7 +60,7 @@ static SHKFacebook *requestingPermisSHKFacebook=nil;
 {
     self = [super init];
     if (self) {
-        self.pendingConnections = [[[NSMutableSet alloc] init] autorelease];
+        self.pendingConnections = [[NSMutableSet alloc] init];
 		[FBSettings setDefaultAppID:SHKCONFIG(facebookAppId)];
     }
     return self;
@@ -74,7 +69,6 @@ static SHKFacebook *requestingPermisSHKFacebook=nil;
 - (void)dealloc
 {
 	[self cancelPendingRequests];
-	self.pendingConnections = nil;
 	[FBSession.activeSession close];	// unhooks this instance from the sessionStateChanged callback
 	if (authingSHKFacebook == self) {
 		authingSHKFacebook = nil;
@@ -82,7 +76,6 @@ static SHKFacebook *requestingPermisSHKFacebook=nil;
 	if (requestingPermisSHKFacebook == self) {
 		requestingPermisSHKFacebook = nil;
 	}
-	[super dealloc];
 }
 
 - (void)cancelPendingRequests{
@@ -114,10 +107,10 @@ static SHKFacebook *requestingPermisSHKFacebook=nil;
 	
     BOOL result = NO;
     FBSession *session =
-	[[[FBSession alloc] initWithAppID:SHKCONFIG(facebookAppId)
+	[[FBSession alloc] initWithAppID:SHKCONFIG(facebookAppId)
 						 permissions:SHKCONFIG(facebookReadPermissions)	// FB only wants read or publish so use default read, request publish when we need it
 					 urlSchemeSuffix:SHKCONFIG(facebookLocalAppId)
-				  tokenCacheStrategy:nil] autorelease];
+				  tokenCacheStrategy:nil];
     
     if (allowLoginUI || (session.state == FBSessionStateCreatedTokenLoaded)) {
         
@@ -171,20 +164,20 @@ static SHKFacebook *requestingPermisSHKFacebook=nil;
      postNotificationName:@"SHKFacebookSessionStateChangeNotification"
      object:session];
     
-    if (error) {
+    if (error && error.fberrorShouldNotifyUser) {
 		[FBSession.activeSession closeAndClearTokenInformation];
+        
         UIAlertView *alertView = [[UIAlertView alloc]
                                   initWithTitle:@"Error"
-                                  message:error.localizedDescription
+                                  message:error.fberrorUserMessage
                                   delegate:nil
                                   cancelButtonTitle:@"OK"
                                   otherButtonTitles:nil];
         [alertView show];
-        [alertView release];
     }
 	if (authingSHKFacebook == self) {
 		authingSHKFacebook = nil;
-		[self release];
+		[[SHK currentHelper] removeSharerReference:self];
 	}
 }
 
@@ -246,16 +239,8 @@ static SHKFacebook *requestingPermisSHKFacebook=nil;
 
 + (BOOL)canShareFile:(SHKFile *)file
 {
-	NSArray *facebookValidTypes = @[@"3g2",@"3gp" ,@"3gpp" ,@"asf",@"avi",@"dat",@"flv",@"m4v",@"mkv",@"mod",@"mov",@"mp4",
-            @"mpe",@"mpeg",@"mpeg4",@"mpg",@"nsv",@"ogm",@"ogv",@"qt" ,@"tod",@"vob",@"wmv"];
-    
-    for (NSString *extension in facebookValidTypes) {
-        if ([file.filename hasSuffix:extension]) {
-            return YES;
-        }
-    }
-    
-    return NO;
+    BOOL result = [SHKFacebookCommon canFacebookAcceptFile:file];
+    return result;
 }
 
 + (BOOL)canShareOffline
@@ -268,12 +253,10 @@ static SHKFacebook *requestingPermisSHKFacebook=nil;
     return YES;
 }
 
-#pragma mark -
-#pragma mark Configuration : Dynamic Enable
-
-- (BOOL)shouldAutoShare
-{
-	return NO;
++ (BOOL)canShare {
+    
+    BOOL result = ![SHKFacebookCommon socialFrameworkAvailable];
+    return result;
 }
 
 #pragma mark -
@@ -290,9 +273,14 @@ static SHKFacebook *requestingPermisSHKFacebook=nil;
 	
 	NSAssert(authingSHKFacebook == nil, @"ShareKit: auth loop logic error - will lead to leaks");
 	authingSHKFacebook = self;
-	[self retain];
+	[[SHK currentHelper] keepSharerReference:self];
 	
 	[self openSessionWithAllowLoginUI:YES];
+}
+
++ (NSString *)username {
+    
+    return [SHKFacebookCommon username];
 }
 
 + (void)logout
@@ -304,36 +292,94 @@ static SHKFacebook *requestingPermisSHKFacebook=nil;
 }
 
 #pragma mark -
+#pragma mark Share Form
+- (NSArray *)shareFormFieldsForType:(SHKShareType)type
+{
+    NSArray *result = [SHKFacebookCommon shareFormFieldsForItem:self.item];
+    return result;
+}
+
+- (void) doNativeShow
+{
+	BOOL displayedNativeDialog = [FBDialogs presentOSIntegratedShareDialogModallyFrom:[[SHK currentHelper] rootViewForUIDisplay]
+                                                                          initialText:self.item.text ? self.item.text : self.item.title
+                                                                                image:self.item.image
+                                                                                  url:self.item.URL
+                                                                              handler:^(FBOSIntegratedShareDialogResult result, NSError *error) {
+                                                                                  if (error) {
+                                                                                      /* handle failure */
+                                                                                      //check if user revoked app permissions
+                                                                                      NSDictionary *response = [error.userInfo valueForKey:FBErrorParsedJSONResponseKey];
+                                                                                      
+                                                                                      if ([error.domain isEqualToString:FacebookSDKDomain] &&
+                                                                                          [[[[response objectForKey:@"body"] objectForKey:@"error"] objectForKey:@"code"] intValue] == 190) {
+                                                                                          [FBSession.activeSession closeAndClearTokenInformation];
+                                                                                          [self shouldReloginWithPendingAction:SHKPendingShare];
+                                                                                      } else {
+                                                                                          [self sendDidFailWithError:error];
+                                                                                          [FBSession.activeSession close];	// unhook us
+                                                                                      }
+                                                                                  } else {
+                                                                                      if (result == FBNativeDialogResultSucceeded) {
+                                                                                          /* handle success */
+                                                                                          [self sendDidFinish];
+                                                                                          [FBSession.activeSession close];	// unhook us
+                                                                                      } else {
+                                                                                          /* handle user cancel */
+                                                                                          [self sendDidCancel];
+                                                                                      }
+                                                                                  }
+                                                                              }];
+	if (!displayedNativeDialog) {
+		[super show];
+	}
+}
+
+- (void)show
+{
+	BOOL tryToPresent = ![SHKCONFIG(forcePreIOS6FacebookPosting) boolValue] && [FBDialogs canPresentOSIntegratedShareDialogWithSession:[FBSession activeSession]];
+	if(tryToPresent){	// if there's a shot
+		if ([FBSession.activeSession.permissions
+			 indexOfObject:@"publish_actions"] == NSNotFound) {	// we need at least this.SHKCONFIG(facebookWritePermissions
+			// No permissions found in session, ask for it
+			[self saveItemForLater:SHKPendingSend];
+			[[SHKActivityIndicator currentIndicator] displayActivity:SHKLocalizedString(@"Authenticating...")];
+			if(requestingPermisSHKFacebook == nil){
+				requestingPermisSHKFacebook = self;
+			}
+			[FBSession.activeSession requestNewPublishPermissions:SHKCONFIG(facebookWritePermissions)
+                                                  defaultAudience:FBSessionDefaultAudienceFriends
+                                                completionHandler:^(FBSession *session, NSError *error) {
+                                                    [self restoreItem];
+                                                    [[SHKActivityIndicator currentIndicator] hide];
+                                                    requestingPermisSHKFacebook = nil;
+                                                    if (error && error.fberrorShouldNotifyUser) {
+                                                        UIAlertView *alertView = [[UIAlertView alloc]
+                                                                                  initWithTitle:@"Error"
+                                                                                  message:error.fberrorUserMessage
+                                                                                  delegate:nil
+                                                                                  cancelButtonTitle:@"OK"
+                                                                                  otherButtonTitles:nil];
+                                                        [alertView show];
+                                                        
+                                                        [self sendDidCancel];
+                                                    }else{
+                                                        // If permissions granted, publish the story
+                                                        [self doNativeShow];
+                                                    }
+                                                    // the session watcher handles the error
+                                                }];
+		} else {
+			// If permissions present, publish the story
+			[self doNativeShow];
+		}
+	}else{
+		[super show];
+	}
+}
+
+#pragma mark -
 #pragma mark Share API Methods
-
-- (void)share {
-    
-    if ([self socialFrameworkAvailable]) {
-        
-        SHKSharer *iosSharer = [SHKiOSFacebook shareItem:self.item];
-        iosSharer.quiet = self.quiet;
-        iosSharer.shareDelegate = self.shareDelegate;
-        [SHKFacebook logout];
-        
-    } else {
-        
-        [super share];
-    }   
-}
-
-- (BOOL)socialFrameworkAvailable {
-    
-    if (self.item.shareType == SHKShareTypeFile)
-        return NO; // iOS6 sharing can't handle video
-    
-    if ([SHKCONFIG(forcePreIOS6FacebookPosting) boolValue])
-        return NO;
-    
-	if (NSClassFromString(@"SLComposeViewController"))
-		return YES;
-	
-	return NO;
-}
 
 -(void) sendDidCancel
 {
@@ -369,21 +415,20 @@ static SHKFacebook *requestingPermisSHKFacebook=nil;
                                                 requestingPermisSHKFacebook = nil;
                                                 if (error) {
                                                     
-                                                    NSString *errorReason = [error.userInfo objectForKey:@"com.facebook.sdk:ErrorLoginFailedReason"];
-                                                    if ([errorReason isEqualToString:@"com.facebook.sdk:ErrorReauthorizeFailedReasonUserCancelled"]) {
+                                                    if (error.fberrorCategory == FBErrorCategoryUserCancelled) {
+                                                        
                                                         [self sendDidCancel];
                                                         return;
                                                         
-                                                    } else {
+                                                    } else if (error.fberrorShouldNotifyUser){
                                                         
                                                         UIAlertView *alertView = [[UIAlertView alloc]
                                                                                   initWithTitle:@"Error"
-                                                                                  message:error.localizedDescription
+                                                                                  message:error.fberrorUserMessage
                                                                                   delegate:nil
                                                                                   cancelButtonTitle:@"OK"
                                                                                   otherButtonTitles:nil];
                                                         [alertView show];
-                                                        [alertView release];
                                                         
                                                         self.pendingAction = SHKPendingShare;	// flip back to here so they can cancel
                                                         [self tryPendingAction];
@@ -406,49 +451,24 @@ static SHKFacebook *requestingPermisSHKFacebook=nil;
 
 - (void)doSend
 {
-	// Warning to modifiers of SEND, be sure that if send becomes more than a single FBRequestConnection
+    // Warning to modifiers of SEND, be sure that if send becomes more than a single FBRequestConnection
 	// you properly deal with closing the session. For the moment we can close the session when these complete
 	// and get un-retained by the session state callback.
-	NSMutableDictionary *params = [NSMutableDictionary dictionary];
-	NSString *actions = [NSString stringWithFormat:@"{\"name\":\"%@ %@\",\"link\":\"%@\"}",
-						 SHKLocalizedString(@"Get"), SHKCONFIG(appName), SHKCONFIG(appURL)];
-	[params setObject:actions forKey:@"actions"];
+	NSMutableDictionary *params = [SHKFacebookCommon composeParamsForItem:self.item];
 	
 	if (self.item.shareType == SHKShareTypeURL || self.item.shareType == SHKShareTypeText)
 	{
-        if (self.item.URL) {
-            NSString *url = [self.item.URL absoluteString];
-            [params setObject:url forKey:@"link"];
-        }
-        
-        if (self.item.title) {
-            [params setObject:self.item.title forKey:@"name"];
-        }
-
-		if (self.item.text)
-			[params setObject:self.item.text forKey:@"message"];
-		
-		NSString *pictureURI = self.item.facebookURLSharePictureURI;
-		if (pictureURI)
-			[params setObject:pictureURI forKey:@"picture"];
-		
-		NSString *description = self.item.facebookURLShareDescription;
-		if (description)
-			[params setObject:description forKey:@"description"];
 		FBRequestConnection* con = [FBRequestConnection startWithGraphPath:@"me/feed"
 																parameters:params
 																HTTPMethod:@"POST" completionHandler:^(FBRequestConnection *connection, id result, NSError *error) {
 																	[self FBRequestHandlerCallback:connection result:result error:error];
 																}];
 		[self.pendingConnections addObject:con];
-		
 	}
 	else if (self.item.shareType == SHKShareTypeImage)
 	{
-		if (self.item.title)
-			[params setObject:self.item.title forKey:@"caption"];
-		if (self.item.text)
-			[params setObject:self.item.text forKey:@"message"];
+        /*if (self.item.title)
+			[params setObject:self.item.title forKey:@"caption"];*/ //caption apparently does not work
 		[params setObject:self.item.image forKey:@"picture"];
 		// There does not appear to be a way to add the photo
 		// via the dialog option:
@@ -469,11 +489,6 @@ static SHKFacebook *requestingPermisSHKFacebook=nil;
                 [self sendDidFinish];
                 return;
             }
-            
-            if (self.item.title)
-                [params setObject:self.item.title forKey:@"name"];
-            if (self.item.text)
-                [params setObject:self.item.text forKey:@"description"];
             
             if (error) {
                 [[SHKActivityIndicator currentIndicator] hide];
@@ -527,8 +542,8 @@ static SHKFacebook *requestingPermisSHKFacebook=nil;
             NSUInteger maxVideoSize = [result[@"video_upload_limits"][@"size"] unsignedIntegerValue];
             BOOL isUnderSize = maxVideoSize >= self.item.file.size;
             if(!isUnderSize){
-                completionBlock([[NSError errorWithDomain:@"video_upload_limits" code:200 userInfo:@{
-                                NSLocalizedDescriptionKey:SHKLocalizedString(@"Video's file size is too large for upload to Facebook.")}] autorelease]);
+                completionBlock([NSError errorWithDomain:@"video_upload_limits" code:200 userInfo:@{
+                                NSLocalizedDescriptionKey:SHKLocalizedString(@"Video's file size is too large for upload to Facebook.")}]);
                 return;
             }
             
@@ -536,8 +551,8 @@ static SHKFacebook *requestingPermisSHKFacebook=nil;
             NSUInteger maxVideoDuration = (int)result[@"video_upload_limits"][@"length"];
             BOOL isUnderDuration = maxVideoDuration >= self.item.file.duration;
             if(!isUnderDuration){
-                completionBlock([[NSError errorWithDomain:@"video_upload_limits" code:200 userInfo:@{
-                                NSLocalizedDescriptionKey:SHKLocalizedString(@"Video's duration is too long for upload to Facebook.")}] autorelease]);
+                completionBlock([NSError errorWithDomain:@"video_upload_limits" code:200 userInfo:@{
+                                NSLocalizedDescriptionKey:SHKLocalizedString(@"Video's duration is too long for upload to Facebook.")}]);
                 return;
             }
             
@@ -596,149 +611,5 @@ static SHKFacebook *requestingPermisSHKFacebook=nil;
 	}
 
 }
-
-#pragma mark - UI Implementation
-- (void) doNativeShow
-{
-	BOOL displayedNativeDialog = [FBDialogs presentOSIntegratedShareDialogModallyFrom:[[SHK currentHelper] rootViewForUIDisplay]
-                                                                          initialText:self.item.text ? self.item.text : self.item.title
-                                                                                image:self.item.image
-                                                                                  url:self.item.URL
-                                                                              handler:^(FBOSIntegratedShareDialogResult result, NSError *error) {
-                                                                                  if (error) {
-                                                                                      /* handle failure */
-                                                                                      //check if user revoked app permissions
-                                                                                      NSDictionary *response = [error.userInfo valueForKey:FBErrorParsedJSONResponseKey];
-                                                                                      
-                                                                                      if ([error.domain isEqualToString:FacebookSDKDomain] &&
-                                                                                          [[[[response objectForKey:@"body"] objectForKey:@"error"] objectForKey:@"code"] intValue] == 190) {
-                                                                                          [FBSession.activeSession closeAndClearTokenInformation];
-                                                                                          [self shouldReloginWithPendingAction:SHKPendingShare];
-                                                                                      } else {
-                                                                                          [self sendDidFailWithError:error];
-                                                                                          [FBSession.activeSession close];	// unhook us
-                                                                                      }
-                                                                                  } else {
-                                                                                      if (result == FBNativeDialogResultSucceeded) {
-                                                                                          /* handle success */
-                                                                                          [self sendDidFinish];
-                                                                                          [FBSession.activeSession close];	// unhook us
-                                                                                      } else {
-                                                                                          /* handle user cancel */
-                                                                                          [self sendDidCancel];
-                                                                                      }
-                                                                                  }
-                                                                              }];
-	if (!displayedNativeDialog) {
-		[self doSHKShow];
-	}
-}
-
-- (void) doSHKShow
-{
-    if (self.item.shareType == SHKShareTypeText || self.item.shareType == SHKShareTypeImage || self.item.shareType == SHKShareTypeURL || self.item.shareType == SHKShareTypeFile)
-    {
-        [self showFacebookForm];
-    }
- 	else
-    {
-        [self tryToSend];
-    }
-}
-
-- (void)show
-{
-	BOOL tryToPresent = ![SHKCONFIG(forcePreIOS6FacebookPosting) boolValue] && [FBDialogs canPresentOSIntegratedShareDialogWithSession:[FBSession activeSession]];
-	if(tryToPresent){	// if there's a shot
-		if ([FBSession.activeSession.permissions
-			 indexOfObject:@"publish_actions"] == NSNotFound) {	// we need at least this.SHKCONFIG(facebookWritePermissions
-			// No permissions found in session, ask for it
-			[self saveItemForLater:SHKPendingSend];
-			[[SHKActivityIndicator currentIndicator] displayActivity:SHKLocalizedString(@"Authenticating...")];
-			if(requestingPermisSHKFacebook == nil){
-				requestingPermisSHKFacebook = self;
-			}
-			[[FBSession activeSession] requestNewPublishPermissions:SHKCONFIG(facebookWritePermissions)
-													   defaultAudience:FBSessionDefaultAudienceFriends
-													 completionHandler:^(FBSession *session, NSError *error) {
-														 [self restoreItem];
-														 [[SHKActivityIndicator currentIndicator] hide];
-														 requestingPermisSHKFacebook = nil;
-														 if (error) {
-															 UIAlertView *alertView = [[UIAlertView alloc]
-																					   initWithTitle:@"Error"
-																					   message:error.localizedDescription
-																					   delegate:nil
-																					   cancelButtonTitle:@"OK"
-																					   otherButtonTitles:nil];
-															 [alertView show];
-                                                             [alertView release];
-															 
-															 [self sendDidCancel];
-														 }else{
-															 // If permissions granted, publish the story
-															 [self doNativeShow];
-														 }
-														 // the session watcher handles the error
-													 }];
-		} else {
-			// If permissions present, publish the story
-			[self doNativeShow];
-		}
-	}else{
-		[self doSHKShow];
-	}
-}
-
-
-- (void)showFacebookForm
-{
- 	SHKCustomFormControllerLargeTextField *rootView = [[SHKCustomFormControllerLargeTextField alloc] initWithNibName:nil bundle:nil delegate:self];  
- 	
-    switch (self.item.shareType) {
-        case SHKShareTypeText:
-            rootView.text = self.item.text;
-            break;
-        case SHKShareTypeImage:
-            rootView.image = self.item.image;
-            rootView.text = self.item.title;
-            break;
-        case SHKShareTypeURL:
-            rootView.text = self.item.text;
-            
-            rootView.allowSendingEmptyMessage = YES;
-            break;
-        case SHKShareTypeFile:
-            rootView.text = self.item.title;
-        default:
-            break;
-    }
-    if ( self.item.URL != nil){
-        rootView.hasLink = YES;
-    }
-    self.navigationBar.tintColor = SHKCONFIG_WITH_ARGUMENT(barTintForView:,self);
- 	[self pushViewController:rootView animated:NO];
-    [rootView release];
-    
-    [[SHK currentHelper] showViewController:self];  
-}
-
-- (void)sendForm:(SHKCustomFormControllerLargeTextField *)form
-{  
- 	switch (self.item.shareType) {
-        case SHKShareTypeText:
-            self.item.text = form.textView.text;
-            break;
-        case SHKShareTypeFile:
-        case SHKShareTypeImage:
-        case SHKShareTypeURL:
-            self.item.text = form.textView.text;
-            break;
-        default:
-            break;
-    }    
-    
- 	[self tryToSend];
-}  
 
 @end

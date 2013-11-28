@@ -124,9 +124,19 @@
 - (NSString*)diigoKey {
   return @"";
 }
-// Twitter - http://dev.twitter.com/apps/new
+
+// Twitter
+
 /*
- Important Twitter settings to get right:
+ If you want to force use of old-style, pre-IOS5 twitter authentication, set this to true. This way user will have to enter credentials to the OAuthWebView presented by your app. These credentials will not end up in the device account store. If set to false, sharekit takes user credentials from the builtin device store on iOS6 or later and utilizes social.framework to share content. Much easier, and thus recommended is to leave this false and use iOS builtin authentication.
+ */
+- (NSNumber*)forcePreIOS5TwitterAccess {
+	return [NSNumber numberWithBool:false];
+}
+
+/* YOU CAN SKIP THIS SECTION unless you set forcePreIOS5TwitterAccess to true, or if you support iOS 4 or older.
+ 
+ Register your app here - http://dev.twitter.com/apps/new
  
  Differences between OAuth and xAuth
  --
@@ -140,14 +150,6 @@
  2. 'Application Type' should be set to BROWSER (not client)
  3. 'Callback URL' should match whatever you enter in SHKTwitterCallbackUrl.  The callback url doesn't have to be an actual existing url.  The user will never get to it because ShareKit intercepts it before the user is redirected.  It just needs to match.
  */
-
-/*
- If you want to force use of old-style, pre-IOS5 twitter framework, for example to ensure
- twitter accounts don't end up in the devices account store, set this to true.
- */
-- (NSNumber*)forcePreIOS5TwitterAccess {
-	return [NSNumber numberWithBool:false];
-}
 
 - (NSString*)twitterConsumerKey {
 	return @"";
@@ -168,6 +170,7 @@
 - (NSString*)twitterUsername {
 	return @"";
 }
+
 // Evernote - http://www.evernote.com/about/developer/api/
 /*	You need to set to sandbox until you get approved by evernote. If you use sandbox, you can use it with special sandbox user account only. You can create it here: https://sandbox.evernote.com/Registration.action
     If you already have a consumer-key and secret which have been created with the old username/password authentication system
@@ -208,7 +211,7 @@
     return @"app://flickr";
 }
 
-// Bit.ly for shortening URLs in case you use original SHKTwitter sharer (pre iOS5). If you use iOS 5 builtin framework, the URL will be shortened anyway, these settings are not used in this case. http://bit.ly/account/register - after signup: http://bit.ly/a/your_api_key If you do not enter bit.ly credentials, URL will be shared unshortened.
+// Bit.ly for shortening URLs, used by some sharers (e.g. Buffer). http://bit.ly/account/register - after signup: http://bit.ly/a/your_api_key If you do not enter bit.ly credentials, URL will be shared unshortened.
 - (NSString*)bitLyLogin {
 	return @"";
 }
@@ -305,6 +308,11 @@
     return [UIColor whiteColor];
 }
 
+///only show instagram in the application list (instead of Instagram plus any other public/jpeg-conforming apps) 
+- (NSNumber *)instagramOnly {
+    return [NSNumber numberWithBool:YES];
+}
+
 // YouTube - https://developers.google.com/youtube/v3/guides/authentication#OAuth2_Register
 - (NSString*)youTubeConsumerKey {
 	return @"";
@@ -321,7 +329,19 @@
 - (NSString *) dropboxAppSecret {
     return @"";
 }
+/*
+ This setting should correspond with permission type set during your app registration with Dropbox. You can choose from these two values:
+ @"sandbox" (set if you chose permission type "App folder" == kDBRootAppFolder. You will have access only to the app folder you set in  https://www.dropbox.com/developers/apps)
+ @"dropbox" (set if you chose permission type "Full dropbox" == kDBRootDropbox)
+ */
+- (NSString *) dropboxRootFolder {
+    return @"sandbox";
+}
 
+// if you set NO, a dialogue will appear where user can choose different filename, otherwise the file is silently overwritten.
+- (NSNumber *)dropboxShouldOverwriteExistedFile {
+    return [NSNumber numberWithBool:YES];
+}
 
 // Buffer
 /*
@@ -340,30 +360,22 @@
 	return @"";
 }
 
--(BOOL)bufferShouldShortenURLS {
-    return YES;
+- (NSNumber *)bufferShouldShortenURLS {
+    return [NSNumber numberWithBool:YES];
 }
-
-/* 
- This setting should correspond with permission type set during your app registration with Dropbox. You can choose from these two values:
-    @"sandbox" (set if you chose permission type "App folder" == kDBRootAppFolder. You will have access only to the app folder you set in  https://www.dropbox.com/developers/apps)
-    @"dropbox" (set if you chose permission type "Full dropbox" == kDBRootDropbox)
-*/
-- (NSString *) dropboxRootFolder {
-    return @"sandbox";
-}
-
-// if you set NO, a dialogue will appear where user can choose different filename, otherwise the file is silently overwritten.
--(BOOL)dropboxShouldOverwriteExistedFile {
-    return YES;
-}
-
 
 /*
  UI Configuration : Basic
  ------------------------
  These provide controls for basic UI settings.  For more advanced configuration see below.
  */
+
+/*
+ For sharers supported by Social.framework you can choose to present Apple's UI (SLComposeViewController) or ShareKit's UI (you can customize ShareKit's UI). Note that SLComposeViewController has only limited sharing capabilities, e.g. for file sharing on Twitter (photo files, video files, large UIImages) ShareKit's UI will be used anyway.
+ */
+- (NSNumber *)useAppleShareUI {
+    return @YES;
+}
 
 // Toolbars
 - (NSString*)barStyle {
@@ -456,10 +468,6 @@
  check out http://getsharekit.com/customize. To use a subclass, you can create your own, and let ShareKit know about it in your configurator, overriding one (or more) of these methods.
  */
 
-- (Class)SHKActionSheetSubclass {    
-    return NSClassFromString(@"SHKActionSheet");
-}
-
 - (Class)SHKShareMenuSubclass {    
     return NSClassFromString(@"SHKShareMenu");
 }
@@ -468,6 +476,7 @@
     return NSClassFromString(@"UITableViewCell");
 }
 
+///You can override methods from Configuration section (see SHKFormController.h) to use your own cell subclasses.
 - (Class)SHKFormControllerSubclass {
     return NSClassFromString(@"SHKFormController");
 }
@@ -477,12 +486,6 @@
  ----------------------
  These settings can be left as is.  This only need to be changed for uber custom installs.
  */
-
-
-/* cocoaPods can not build ShareKit.bundle resource target. This switches ShareKit to use resources directly. If someone knows how to build a resource target with cocoapods, please submit a pull request, so we can get rid of languages ShareKit.bundle and put languages directly to resource target */
-- (NSNumber *)isUsingCocoaPods {
-    return [NSNumber numberWithBool:NO];
-}
 
 - (NSNumber*)maxFavCount {
 	return [NSNumber numberWithInt:3];
@@ -507,7 +510,7 @@
 /* 
  Debugging settings
  ------------------
- see DefaultSHKConfigurator.h
+ see Debug.h
  */
 
 /*

@@ -22,6 +22,9 @@
 //  THE SOFTWARE.
 
 #import "SHKSharerDelegate.h"
+#import "SHKActivityIndicator.h"
+#import "SHK.h"
+#import "Debug.h"
 
 @implementation SHKSharerDelegate
 
@@ -48,13 +51,13 @@
     [[SHKActivityIndicator currentIndicator] hide];
 
     //if user sent the item already but needs to relogin we do not show alert
-    if (!sharer.quiet && sharer.pendingAction != SHKPendingShare && sharer.pendingAction != SHKPendingSend)
+    if (!sharer.quiet && sharer.pendingAction != SHKPendingShare && sharer.pendingAction != SHKPendingSend && sharer.pendingAction != SHKPendingRefreshToken)
 	{				
-		[[[[UIAlertView alloc] initWithTitle:SHKLocalizedString(@"Error")
+		[[[UIAlertView alloc] initWithTitle:SHKLocalizedString(@"Error")
 									 message:sharer.lastError!=nil?[sharer.lastError localizedDescription]:SHKLocalizedString(@"There was an error while sharing")
 									delegate:nil
 						   cancelButtonTitle:SHKLocalizedString(@"Close")
-						   otherButtonTitles:nil] autorelease] show];
+						   otherButtonTitles:nil] show];
     }		
     if (shouldRelogin) {        
         [sharer promptAuthorization];
@@ -68,30 +71,32 @@
 
 - (void)sharerAuthDidFinish:(SHKSharer *)sharer success:(BOOL)success
 {
-
+    //it is convenient to fetch user info after successful authorization. Not only you have username etc at your disposal, but there can be also various limits used by ShareKit to determine if the service can accept particular item (eg. video size) for this user. If it does not, ShareKit does not offer this service in share menu. SHKFacebook has a bug - it is crashing if you fetch user info alone after authorization. You have to share something to be really authorized. SHKFacebook has a very confusing implementation, thus this is easier. I suggest to use SHKiOSFacebook wherever possible.
+    if (![[sharer class] isEqual:NSClassFromString(@"SHKFacebook")]) {
+        [[sharer class] getUserInfo];
+    }
 }
 
 - (void)sharerShowBadCredentialsAlert:(SHKSharer *)sharer
 {    
     NSString *errorMessage = SHKLocalizedString(@"Sorry, %@ did not accept your credentials. Please try again.", [[sharer class] sharerTitle]);
        
-    [[[[UIAlertView alloc] initWithTitle:SHKLocalizedString(@"Login Error")
+    [[[UIAlertView alloc] initWithTitle:SHKLocalizedString(@"Login Error")
                                  message:errorMessage
                                 delegate:nil
                        cancelButtonTitle:SHKLocalizedString(@"Close")
-                       otherButtonTitles:nil] autorelease] show];
+                       otherButtonTitles:nil] show];
 }
 
 - (void)sharerShowOtherAuthorizationErrorAlert:(SHKSharer *)sharer
 {    
     NSString *errorMessage = SHKLocalizedString(@"Sorry, %@ encountered an error. Please try again.", [[sharer class] sharerTitle]);
     
-    [[[[UIAlertView alloc] initWithTitle:SHKLocalizedString(@"Login Error")
+    [[[UIAlertView alloc] initWithTitle:SHKLocalizedString(@"Login Error")
                                  message:errorMessage
                                 delegate:nil
                        cancelButtonTitle:SHKLocalizedString(@"Close")
-                       otherButtonTitles:nil] autorelease] show];
+                       otherButtonTitles:nil] show];
 }
-
 
 @end
