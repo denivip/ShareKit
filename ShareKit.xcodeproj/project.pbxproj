@@ -327,11 +327,6 @@
 		7AF701F718BCCCF400438CE2 /* SHKSession.h in Headers */ = {isa = PBXBuildFile; fileRef = 7AF701F518BCCCF400438CE2 /* SHKSession.h */; };
 		7AF701F818BCCCF400438CE2 /* SHKSession.m in Sources */ = {isa = PBXBuildFile; fileRef = 7AF701F618BCCCF400438CE2 /* SHKSession.m */; };
 		9492063917302B4C00DF9530 /* libKippt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = AABBECFF162F0835009D46E4 /* libKippt.a */; };
-		949BCB97172A99AF00D706D4 /* SHKBuffer.h in Headers */ = {isa = PBXBuildFile; fileRef = 949BCB95172A99AF00D706D4 /* SHKBuffer.h */; };
-		949BCB98172A99AF00D706D4 /* SHKBuffer.m in Sources */ = {isa = PBXBuildFile; fileRef = 949BCB96172A99AF00D706D4 /* SHKBuffer.m */; };
-		94CC29011745399400C31CD8 /* BufferSDK.h in Headers */ = {isa = PBXBuildFile; fileRef = 94CC28FE1745399400C31CD8 /* BufferSDK.h */; };
-		94CC29021745399400C31CD8 /* libBufferSDK.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 94CC29001745399400C31CD8 /* libBufferSDK.a */; };
-		94CC29071745399800C31CD8 /* BufferSDKResources.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 94CC28FF1745399400C31CD8 /* BufferSDKResources.bundle */; };
 		AABBECB8162F063F009D46E4 /* SHKPrint.m in Sources */ = {isa = PBXBuildFile; fileRef = BA465F1E14CC3C5A00B52394 /* SHKPrint.m */; };
 		AABBECC3162F0719009D46E4 /* SHKLogout.m in Sources */ = {isa = PBXBuildFile; fileRef = E68738BF1416795C00D8C3DD /* SHKLogout.m */; };
 		AABBECCC162F0756009D46E4 /* SHKCopy.m in Sources */ = {isa = PBXBuildFile; fileRef = 43A536B911DBE3B9004A1712 /* SHKCopy.m */; };
@@ -1216,11 +1211,6 @@
 		7AF701F518BCCCF400438CE2 /* SHKSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SHKSession.h; sourceTree = "<group>"; };
 		7AF701F618BCCCF400438CE2 /* SHKSession.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SHKSession.m; sourceTree = "<group>"; };
 		949BCB8C172A993000D706D4 /* libBuffer.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libBuffer.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		949BCB95172A99AF00D706D4 /* SHKBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SHKBuffer.h; sourceTree = "<group>"; };
-		949BCB96172A99AF00D706D4 /* SHKBuffer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SHKBuffer.m; sourceTree = "<group>"; };
-		94CC28FE1745399400C31CD8 /* BufferSDK.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BufferSDK.h; sourceTree = "<group>"; };
-		94CC28FF1745399400C31CD8 /* BufferSDKResources.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; path = BufferSDKResources.bundle; sourceTree = "<group>"; };
-		94CC29001745399400C31CD8 /* libBufferSDK.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libBufferSDK.a; sourceTree = "<group>"; };
 		AA3B1DDC161292A100036C82 /* Accounts.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accounts.framework; path = System/Library/Frameworks/Accounts.framework; sourceTree = SDKROOT; };
 		AA3B1DDD161292A100036C82 /* AdSupport.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AdSupport.framework; path = System/Library/Frameworks/AdSupport.framework; sourceTree = SDKROOT; };
 		AA3B1DE41612938F00036C82 /* Social.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Social.framework; path = System/Library/Frameworks/Social.framework; sourceTree = SDKROOT; };
@@ -1515,7 +1505,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				94CC29021745399400C31CD8 /* libBufferSDK.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2175,7 +2164,6 @@
 			children = (
 				7A70B2A3191C7E530070C5FB /* Pinterest */,
 				AC21961518EA88D6003DF6BD /* OneNote */,
-				949BCB94172A998A00D706D4 /* Buffer */,
 				7A0F91CB156B9FCE009CB40A /* Delicious */,
 				B7EFCD8914C6B966004910F1 /* Diigo */,
 				DE334C0316F3315D00FF692B /* Dropbox */,
@@ -2758,27 +2746,6 @@
 			name = Generated;
 			sourceTree = "<group>";
 		};
-		949BCB94172A998A00D706D4 /* Buffer */ = {
-			isa = PBXGroup;
-			children = (
-				949BCB95172A99AF00D706D4 /* SHKBuffer.h */,
-				949BCB96172A99AF00D706D4 /* SHKBuffer.m */,
-				94AF3EC41745281D00069C17 /* BufferSDK */,
-			);
-			path = Buffer;
-			sourceTree = "<group>";
-		};
-		94AF3EC41745281D00069C17 /* BufferSDK */ = {
-			isa = PBXGroup;
-			children = (
-				94CC28FE1745399400C31CD8 /* BufferSDK.h */,
-				94CC28FF1745399400C31CD8 /* BufferSDKResources.bundle */,
-				94CC29001745399400C31CD8 /* libBufferSDK.a */,
-			);
-			name = BufferSDK;
-			path = "../../../../../Submodules/buffer-ios-sdk/BufferSDK";
-			sourceTree = "<group>";
-		};
 		AAACE01413CCB1F500A2118F /* Configuration */ = {
 			isa = PBXGroup;
 			children = (
@@ -3197,8 +3164,6 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				949BCB97172A99AF00D706D4 /* SHKBuffer.h in Headers */,
-				94CC29011745399400C31CD8 /* BufferSDK.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4304,7 +4269,6 @@
 				AABBED7E162F0C4D009D46E4 /* Tumbl */,
 				7A1AFD2B160E14340086B98A /* Twitter */,
 				AABBED12162F08A3009D46E4 /* VKontakte */,
-				7AC2A38E16597F4C0089ABE8 /* Sina Weibo */,
 				7A49DBBB16BC193E004B7E78 /* Readability */,
 				7A203D0216EB7DA200421995 /* Hatena */,
 				7AAE8C9D16EB960500429C51 /* Plurk */,
@@ -4344,7 +4308,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				7A2882571553D7E1007DC379 /* SHKSharers.plist in Resources */,
-				94CC29071745399800C31CD8 /* BufferSDKResources.bundle in Resources */,
 				7A107CE417AA4E7A009A7F0E /* DETweetPaperClip.png in Resources */,
 				7A107CE517AA4E7A009A7F0E /* DETweetPaperClip@2x.png in Resources */,
 				7A9FEF35180403520053CB40 /* Localizable.strings in Resources */,
@@ -4656,7 +4619,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				949BCB98172A99AF00D706D4 /* SHKBuffer.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
